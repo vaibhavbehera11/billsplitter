@@ -1,37 +1,33 @@
 require("dotenv").config();
 
+const http = require("http");
 const express = require("express");
 const cors = require("cors");
+const { Server } = require("socket.io");
 
 const connectDB = require("./config/db");
 const sessionRoutes = require("./routes/sessions");
+const initializeSocket = require("./socket");
 
 const app = express();
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CLIENT_URL,
+  },
+});
+
+initializeSocket(io);
 
 // Connect to MongoDB
 connectDB();
 
-// Middleware
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL,
-  })
-);
-
-app.use(express.json());
-
-// Routes
-app.use("/sessions", sessionRoutes);
-
-// Health check route
-app.get("/", (req, res) => {
-  res.json({
-    status: "API is running",
-  });
-});
+// Middleware...
+// Routes...
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });

@@ -1,8 +1,32 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+import Home from "./pages/Home";
+import CreateSession from "./pages/CreateSession";
+import JoinSession from "./pages/JoinSession";
+import Session from "./pages/Session";
+
 function App() {
   return (
-    <div>
-      <h1>Bill Splitter</h1>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+
+        <Route
+          path="/create-session"
+          element={<CreateSession />}
+        />
+
+        <Route
+          path="/join-session"
+          element={<JoinSession />}
+        />
+
+        <Route
+          path="/session/:roomCode"
+          element={<Session />}
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

@@ -5,8 +5,8 @@ function initializeSocket(io) {
     console.log("Client connected:", socket.id);
 
     // Register all session-related socket events
-    registerSessionHandlers(socket);
-
+    registerSessionHandlers(socket, io);
+    
     socket.on("disconnect", () => {
       console.log("Client disconnected:", socket.id);
     });

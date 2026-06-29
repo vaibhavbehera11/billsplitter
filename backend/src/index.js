@@ -23,8 +23,18 @@ initializeSocket(io);
 // Connect to MongoDB
 connectDB();
 
-// Middleware...
-// Routes...
+// Middleware
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+  })
+);
+
+app.use(express.json());
+
+// Routes
+app.use("/sessions", sessionRoutes);
 
 const PORT = process.env.PORT || 5000;
 

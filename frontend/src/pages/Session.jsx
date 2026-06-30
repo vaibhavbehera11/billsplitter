@@ -4,6 +4,7 @@ import socket from "../services/socket";
 
 function Session() {
   const { roomCode } = useParams();
+
   const [itemName, setItemName] = useState("");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -11,26 +12,38 @@ function Session() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-  socket.connect();
+  const handleConnect = () => {
+    console.log("Connected:", socket.id);
 
-  socket.emit("join-session", {
-    roomCode,
-  });
+    socket.emit("join-session", {
+      roomCode,
+    });
+  };
 
-  socket.on("session-joined", (session) => {
+  const handleSessionJoined = (session) => {
     console.log("Session joined:", session);
-  });
+  };
 
-  socket.on("item-added", (item) => {
+  const handleItemAdded = (item) => {
     console.log("Item received:", item);
 
     setItems((previousItems) => [...previousItems, item]);
-  });
+  };
+
+  socket.on("connect", handleConnect);
+  socket.on("session-joined", handleSessionJoined);
+  socket.on("item-added", handleItemAdded);
+
+  if (!socket.connected) {
+    socket.connect();
+  } else {
+    handleConnect();
+  }
 
   return () => {
-    socket.off("session-joined");
-    socket.off("item-added");
-    socket.disconnect();
+    socket.off("connect", handleConnect);
+    socket.off("session-joined", handleSessionJoined);
+    socket.off("item-added", handleItemAdded);
   };
 }, [roomCode]);
 
@@ -44,43 +57,42 @@ function Session() {
   };
 
   const handleAddItem = () => {
-  setError("");
+    setError("");
 
-  if (!itemName.trim()) {
-    setError("Item name is required.");
-    return;
-  }
+    if (!itemName.trim()) {
+      setError("Item name is required.");
+      return;
+    }
 
-  if (!price || Number(price) <= 0) {
-    setError("Price must be greater than 0.");
-    return;
-  }
+    if (!price || Number(price) <= 0) {
+      setError("Price must be greater than 0.");
+      return;
+    }
 
-  if (!quantity || Number(quantity) <= 0) {
-    setError("Quantity must be greater than 0.");
-    return;
-  }
-kk
-  console.log("Sending add-item", {
-  roomCode,
-  name: itemName,
-  price: Number(price),
-  quantity: Number(quantity),
-});
+    if (!quantity || Number(quantity) <= 0) {
+      setError("Quantity must be greater than 0.");
+      return;
+    }
 
-  socket.emit("add-item", {
-    roomCode,
-    name: itemName.trim(),
-    price: Number(price),
-    quantity: Number(quantity),
-  });
+    console.log("Sending add-item", {
+      roomCode,
+      name: itemName.trim(),
+      price: Number(price),
+      quantity: Number(quantity),
+    });
 
-  setItemName("");
-  setPrice("");
-  setQuantity("");
-  setError("");
-};
+    socket.emit("add-item", {
+      roomCode,
+      name: itemName.trim(),
+      price: Number(price),
+      quantity: Number(quantity),
+    });
 
+    setItemName("");
+    setPrice("");
+    setQuantity("");
+    setError("");
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 px-4 py-8">
@@ -122,7 +134,7 @@ kk
           </p>
         </div>
 
-        {/* Add Item UI */}
+        {/* Add Item */}
         <div className="mt-10 border-t pt-6">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
             Add Item
@@ -136,7 +148,7 @@ kk
 
               <input
                 type="text"
-                placeholder="Enter item name :"
+                placeholder="Enter item name"
                 value={itemName}
                 onChange={(e) => setItemName(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -175,15 +187,14 @@ kk
               onClick={handleAddItem}
               className="w-full rounded-lg bg-indigo-600 py-3 font-semibold text-white hover:bg-indigo-700 transition"
             >
-            Add Item
+              Add Item
             </button>
-           {
-              error && (
-              <p className="text-red-500 text-sm text-center">
+
+            {error && (
+              <p className="text-center text-sm text-red-500">
                 {error}
               </p>
-              )
-          }
+            )}
           </div>
         </div>
 
@@ -194,31 +205,31 @@ kk
           </h3>
 
           {items.length === 0 ? (
-          <p className="text-gray-500 text-center">
-            No items added yet.
-          </p>
+            <p className="text-center text-gray-500">
+              No items added yet.
+            </p>
           ) : (
-          <div className="space-y-4">
-          {items.map((item, index) => (
-            <div
-              key={item._id || index}
-              className="rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm"
-            >
-              <h4 className="text-lg font-semibold text-indigo-700">
-                {item.name}
-              </h4>
+            <div className="space-y-4">
+              {items.map((item, index) => (
+                <div
+                  key={item._id || index}
+                  className="rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm"
+                >
+                  <h4 className="text-lg font-semibold text-indigo-700">
+                    {item.name}
+                  </h4>
 
-              <p className="text-gray-700 mt-2">
-                <span className="font-medium">Price:</span> ₹{item.price}
-              </p>
+                  <p className="mt-2 text-gray-700">
+                    <span className="font-medium">Price:</span> ₹{item.price}
+                  </p>
 
-              <p className="text-gray-700">
-                <span className="font-medium">Quantity:</span> {item.quantity}
-              </p>
+                  <p className="text-gray-700">
+                    <span className="font-medium">Quantity:</span> {item.quantity}
+                  </p>
+                </div>
+              ))}
             </div>
-          ))}
-          </div>
-        )}
+          )}
         </div>
       </div>
     </div>

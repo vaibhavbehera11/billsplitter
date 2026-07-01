@@ -2,6 +2,7 @@ import ParticipantChip from "../components/ParticipantChip/ParticipantChip";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import socket from "../services/socket";
+import api from "../services/api";
 
 function Session() {
   const { roomCode } = useParams();
@@ -15,6 +16,23 @@ function Session() {
   const [participantName, setParticipantName] = useState("");
 
   const [error, setError] = useState("");
+
+  useEffect(() => {
+  const fetchSession = async () => {
+    try {
+      const response = await api.get(`/sessions/${roomCode}`);
+
+      const session = response.data.data;
+
+      setParticipants(session.participants || []);
+      setItems(session.items || []);
+    } catch (error) {
+      console.error("Failed to load session:", error);
+    }
+  };
+
+  fetchSession();
+  }, [roomCode]);
 
   useEffect(() => {
     const handleConnect = () => {

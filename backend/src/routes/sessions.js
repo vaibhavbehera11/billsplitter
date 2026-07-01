@@ -62,4 +62,30 @@ router.post("/join", async (req, res) => {
   }
 });
 
+// Get Session
+router.get("/:roomCode", async (req, res) => {
+  try {
+    const { roomCode } = req.params;
+
+    const session = await Session.findOne({ roomCode });
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: "Session not found or expired",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: session,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 module.exports = router;

@@ -5,12 +5,15 @@ import api from "../services/api";
 function JoinSession() {
   const navigate = useNavigate();
 
+  const [participantName, setParticipantName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleJoinSession = async () => {
-    if (!roomCode.trim()) return;
+    if (!participantName.trim() || !roomCode.trim()) {
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -19,6 +22,11 @@ function JoinSession() {
       const response = await api.post("/sessions/join", {
         roomCode,
       });
+
+      localStorage.setItem(
+        "participantName",
+        participantName.trim()
+      );
 
       navigate(`/session/${response.data.data.roomCode}`);
     } catch (err) {
@@ -31,14 +39,21 @@ function JoinSession() {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
-
         <h1 className="text-2xl font-bold text-center text-indigo-700 mb-2">
           Join Session
         </h1>
 
         <p className="text-center text-gray-500 mb-6">
-          Enter the room code to join an existing session.
+          Enter your name and the room code to join an existing session.
         </p>
+
+        <input
+          type="text"
+          placeholder="Your Name"
+          value={participantName}
+          onChange={(e) => setParticipantName(e.target.value)}
+          className="w-full border rounded-xl px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
 
         <input
           type="text"
@@ -53,7 +68,11 @@ function JoinSession() {
 
         <button
           onClick={handleJoinSession}
-          disabled={loading || !roomCode.trim()}
+          disabled={
+            loading ||
+            !participantName.trim() ||
+            !roomCode.trim()
+          }
           className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold disabled:opacity-50"
         >
           {loading ? "Joining..." : "Join Session"}
@@ -64,7 +83,6 @@ function JoinSession() {
             {error}
           </p>
         )}
-
       </div>
     </div>
   );

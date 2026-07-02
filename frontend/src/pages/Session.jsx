@@ -16,7 +16,7 @@ function Session() {
 
   const [items, setItems] = useState([]);
   const [participants, setParticipants] = useState([]);
-
+  const [selectedParticipants, setSelectedParticipants] = useState([]);
   const [error, setError] = useState("");
 
   // Load latest session from MongoDB
@@ -117,6 +117,16 @@ useEffect(() => {
     }
   };
 
+  const toggleParticipant = (participantId) => {
+    setSelectedParticipants((prev) => {
+        if (prev.includes(participantId)) {
+            return prev.filter((id) => id !== participantId);
+        }
+
+        return [...prev, participantId];
+    });
+  };
+
   const handleAddItem = () => {
     setError("");
 
@@ -135,16 +145,24 @@ useEffect(() => {
       return;
     }
 
+    if (selectedParticipants.length === 0) {
+      setError("Select at least one participant.");
+      return;
+    
+    }
+
     socket.emit("add-item", {
-      roomCode,
-      name: itemName.trim(),
-      price: Number(price),
-      quantity: Number(quantity),
-    });
+  roomCode,
+  name: itemName.trim(),
+  price: Number(price),
+  quantity: Number(quantity),
+  participantIds: selectedParticipants,
+});
 
     setItemName("");
     setPrice("");
     setQuantity("");
+    setSelectedParticipants([]);
     setError("");
   };
 
@@ -258,6 +276,23 @@ useEffect(() => {
                 className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
+
+            <div className="mt-4">
+              <p className="mb-2 font-medium">
+                Split Between
+    </p>
+
+    <div className="flex flex-wrap gap-2">
+        {participants.map((participant) => (
+          <ParticipantChip
+            key={participant._id}
+            name={participant.name}
+            selected={selectedParticipants.includes(participant._id)}
+            onClick={() => toggleParticipant(participant._id)}
+          />
+        ))}
+    </div>
+</div>
 
             <button
               onClick={handleAddItem}

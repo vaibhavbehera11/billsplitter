@@ -1,8 +1,20 @@
 const Session = require("../models/Session");
 
+
+
+
 function registerSessionHandlers(socket, io) {
-  socket.on("join-session", async ({ roomCode }) => {
+  socket.on(
+  "join-session",
+  async ({ roomCode, participantName, participantId }) => {
     try {
+      if (!roomCode) {
+        socket.emit("error", {
+          message: "Room code is required.",
+        });
+        return;
+      }
+
       const session = await Session.findOne({ roomCode });
 
       if (!session) {
@@ -12,9 +24,53 @@ function registerSessionHandlers(socket, io) {
         return;
       }
 
-      console.log("Session found:", session.roomCode);
+      const trimmedName = participantName?.trim();
+
+      if (!trimmedName) {
+        socket.emit("error", {
+          message: "Participant name is required.",
+        });
+        return;
+      }
+
+      let participant = null;
+
+      // Returning participant after refresh
+      if (participantId) {
+        participant = session.participants.id(participantId);
+      }
+
+      // First time joining
+      if (!participant) {
+        participant = {
+          name: trimmedName,
+        };
+
+        session.participants.push(participant);
+
+        await session.save();
+
+        participant =
+          session.participants[
+            session.participants.length - 1
+          ];
+      }
+
+      console.log(
+        `Participant "${participant.name}" joined room ${roomCode}`
+      );
 
       socket.join(roomCode);
+
+      socket.emit("participant-registered", {
+        participantId: participant._id,
+        participantName: participant.name,
+      });
+
+      io.to(roomCode).emit(
+        "participant-added",
+        session.participants
+      );
 
       socket.emit("session-joined", session);
     } catch (error) {
@@ -24,7 +80,8 @@ function registerSessionHandlers(socket, io) {
         message: "Something went wrong",
       });
     }
-  });
+  }
+);
 
   socket.on("add-item", async ({ roomCode, name, price, quantity }) => {
     try {

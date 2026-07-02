@@ -2,65 +2,111 @@ import ParticipantChip from "../components/ParticipantChip/ParticipantChip";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import socket from "../services/socket";
+import api from "../services/api";
 
 function Session() {
   const { roomCode } = useParams();
 
+  const participantName = localStorage.getItem("participantName");
+  const participantId = localStorage.getItem("participantId");
+
   const [itemName, setItemName] = useState("");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
+
   const [items, setItems] = useState([]);
   const [participants, setParticipants] = useState([]);
-
-  const [participantName, setParticipantName] = useState("");
-
+  const [selectedParticipants, setSelectedParticipants] = useState([]);
   const [error, setError] = useState("");
 
+  // Load latest session from MongoDB
   useEffect(() => {
-    const handleConnect = () => {
-      console.log("Connected:", socket.id);
+    const fetchSession = async () => {
+      try {
+        const response = await api.get(`/sessions/${roomCode}`);
 
-      socket.emit("join-session", {
-        roomCode,
-      });
+        const session = response.data.data;
+
+        setParticipants(session.participants || []);
+        setItems(session.items || []);
+      } catch (error) {
+        console.error("Failed to load session:", error);
+      }
     };
 
-    const handleSessionJoined = (session) => {
-      console.log("Session joined:", session);
-
-      setParticipants(session.participants || []);
-    };
-
-    const handleItemAdded = (item) => {
-      console.log("Item received:", item);
-
-      setItems((previousItems) => [...previousItems, item]);
-    };
-
-    const handleParticipantAdded = (participants) => {
-      console.log("Participants updated:", participants);
-
-      setParticipants(participants);
-    };
-
-    socket.on("connect", handleConnect);
-    socket.on("session-joined", handleSessionJoined);
-    socket.on("item-added", handleItemAdded);
-    socket.on("participant-added", handleParticipantAdded);
-
-    if (!socket.connected) {
-      socket.connect();
-    } else {
-      handleConnect();
-    }
-
-    return () => {
-      socket.off("connect", handleConnect);
-      socket.off("session-joined", handleSessionJoined);
-      socket.off("item-added", handleItemAdded);
-      socket.off("participant-added", handleParticipantAdded);
-    };
+    fetchSession();
   }, [roomCode]);
+
+  // Socket connection
+useEffect(() => {
+  const handleConnect = () => {
+    console.log("Connected:", socket.id);
+
+    socket.emit("join-session", {
+      roomCode,
+      participantName,
+      participantId,
+    });
+  };
+
+  const handleSessionJoined = (session) => {
+    console.log("Session joined:", session);
+
+    setParticipants(session.participants || []);
+    setItems(session.items || []);
+  };
+
+  const handleItemAdded = (item) => {
+    console.log("Item received:", item);
+
+    setItems((previousItems) => [...previousItems, item]);
+  };
+
+  const handleParticipantAdded = (participants) => {
+    console.log("Participants updated:", participants);
+
+    setParticipants(participants);
+  };
+
+  const handleParticipantRegistered = ({
+    participantId,
+    participantName,
+  }) => {
+    console.log("Participant registered:", {
+      participantId,
+      participantName,
+    });
+
+    localStorage.setItem("participantId", participantId);
+    localStorage.setItem("participantName", participantName);
+  };
+
+  socket.on("connect", handleConnect);
+  socket.on("session-joined", handleSessionJoined);
+  socket.on("item-added", handleItemAdded);
+  socket.on("participant-added", handleParticipantAdded);
+  socket.on(
+    "participant-registered",
+    handleParticipantRegistered
+  );
+
+  if (!socket.connected) {
+    socket.connect();
+  } else {
+    handleConnect();
+  }
+
+  return () => {
+    socket.off("connect", handleConnect);
+    socket.off("session-joined", handleSessionJoined);
+    socket.off("item-added", handleItemAdded);
+    socket.off("participant-added", handleParticipantAdded);
+    socket.off(
+      "participant-registered",
+      handleParticipantRegistered
+    );
+  };
+}, [roomCode, participantName, participantId]);
 
   const copyRoomCode = async () => {
     try {
@@ -71,23 +117,14 @@ function Session() {
     }
   };
 
-  const handleAddParticipant = () => {
-    if (!participantName.trim()) {
-      alert("Participant name is required.");
-      return;
-    }
+  const toggleParticipant = (participantId) => {
+    setSelectedParticipants((prev) => {
+        if (prev.includes(participantId)) {
+            return prev.filter((id) => id !== participantId);
+        }
 
-    console.log("Sending add-participant", {
-      roomCode,
-      name: participantName.trim(),
+        return [...prev, participantId];
     });
-
-    socket.emit("add-participant", {
-      roomCode,
-      name: participantName.trim(),
-    });
-
-    setParticipantName("");
   };
 
   const handleAddItem = () => {
@@ -108,23 +145,24 @@ function Session() {
       return;
     }
 
-    console.log("Sending add-item", {
-      roomCode,
-      name: itemName.trim(),
-      price: Number(price),
-      quantity: Number(quantity),
-    });
+    if (selectedParticipants.length === 0) {
+      setError("Select at least one participant.");
+      return;
+    
+    }
 
     socket.emit("add-item", {
-      roomCode,
-      name: itemName.trim(),
-      price: Number(price),
-      quantity: Number(quantity),
-    });
+  roomCode,
+  name: itemName.trim(),
+  price: Number(price),
+  quantity: Number(quantity),
+  participantIds: selectedParticipants,
+});
 
     setItemName("");
     setPrice("");
     setQuantity("");
+    setSelectedParticipants([]);
     setError("");
   };
 
@@ -136,7 +174,7 @@ function Session() {
         </h1>
 
         <p className="text-center text-gray-500 mt-2">
-          Session Created
+          Connected
         </p>
 
         {/* Room Code */}
@@ -163,23 +201,6 @@ function Session() {
             Participants
           </h3>
 
-          <div className="flex gap-2 mb-4">
-            <input
-              type="text"
-              placeholder="Enter participant name"
-              value={participantName}
-              onChange={(e) => setParticipantName(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-
-            <button
-              onClick={handleAddParticipant}
-              className="rounded-lg bg-indigo-600 px-5 py-2 font-medium text-white hover:bg-indigo-700 transition"
-            >
-              Add
-            </button>
-          </div>
-
           {participants.length === 0 ? (
             <p className="text-gray-500">
               No participants yet.
@@ -188,8 +209,8 @@ function Session() {
             <div className="flex flex-wrap gap-2">
               {participants.map((participant) => (
                 <ParticipantChip
-                  key={participant}
-                  name={participant}
+                  key={participant._id}
+                  name={participant.name}
                 />
               ))}
             </div>
@@ -255,6 +276,23 @@ function Session() {
                 className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
+
+            <div className="mt-4">
+              <p className="mb-2 font-medium">
+                Split Between
+    </p>
+
+    <div className="flex flex-wrap gap-2">
+        {participants.map((participant) => (
+          <ParticipantChip
+            key={participant._id}
+            name={participant.name}
+            selected={selectedParticipants.includes(participant._id)}
+            onClick={() => toggleParticipant(participant._id)}
+          />
+        ))}
+    </div>
+</div>
 
             <button
               onClick={handleAddItem}

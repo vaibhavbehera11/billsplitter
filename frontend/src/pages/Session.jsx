@@ -19,6 +19,7 @@ function Session() {
   const [items, setItems] = useState([]);
   const [participants, setParticipants] = useState([]);
   const [selectedParticipants, setSelectedParticipants] = useState([]);
+  const [totals, setTotals] = useState({});
   const [error, setError] = useState("");
 
   // Load latest session from MongoDB
@@ -58,10 +59,16 @@ useEffect(() => {
     setItems(session.items || []);
   };
 
-  const handleItemAdded = (item) => {
-    console.log("Item received:", item);
+  const handleItemAdded = ({ item, totals }) => {
+  console.log("Item received:", item);
+  console.log("Totals received:", totals);
 
-    setItems((previousItems) => [...previousItems, item]);
+  setItems((previousItems) => [
+    ...previousItems,
+    item,
+  ]);
+
+  setTotals(totals);
   };
 
   const handleParticipantAdded = (participants) => {
@@ -333,7 +340,10 @@ useEffect(() => {
           </div>
           )}
 
-          <RunningTotals participants={participants} />
+          <RunningTotals
+            participants={participants}
+            totals={totals}
+          />
         </div>
       </div>
     </div>

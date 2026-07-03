@@ -1,6 +1,5 @@
 const Session = require("../models/Session");
-
-
+const calculateTotals = require("../utils/calculateTotals");
 
 
 function registerSessionHandlers(socket, io) {
@@ -148,12 +147,14 @@ function registerSessionHandlers(socket, io) {
       await session.save();
 
       const addedItem =
-        session.items[session.items.length - 1];
+      session.items[session.items.length - 1];
 
-      io.to(roomCode).emit(
-        "item-added",
-        addedItem
-      );
+      const totals = calculateTotals(session.items);
+
+      io.to(roomCode).emit("item-added", {
+      item: addedItem,
+      totals,
+      });
 
       console.log(
         `Item "${addedItem.name}" added to room ${roomCode}`

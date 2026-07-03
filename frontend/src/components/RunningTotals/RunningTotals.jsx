@@ -1,4 +1,4 @@
-function RunningTotals({ participants }) {
+function RunningTotals({ participants, totals }) {
   return (
     <div className="mt-6 rounded-lg bg-white p-4 shadow">
       <h2 className="mb-4 text-lg font-semibold">
@@ -19,7 +19,7 @@ function RunningTotals({ participants }) {
               <span>{participant.name}</span>
 
               <span className="font-semibold">
-                ₹0
+                ₹{totals?.[participant._id] || 0}
               </span>
             </div>
           ))}

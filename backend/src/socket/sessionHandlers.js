@@ -83,13 +83,16 @@ function registerSessionHandlers(socket, io) {
   }
 );
 
-  socket.on("add-item", async ({ roomCode, name, price, quantity }) => {
+  socket.on(
+  "add-item",
+  async ({ roomCode, name, price, quantity, participantIds }) => {
     try {
       const parsedPrice = Number(price);
+
       const parsedQuantity =
         quantity === undefined ? 1 : Number(quantity);
 
-      // Validate incoming item data before touching the database.
+      // Validate item data and require at least one selected participant.
       if (
         !roomCode ||
         !name ||
@@ -97,7 +100,9 @@ function registerSessionHandlers(socket, io) {
         Number.isNaN(parsedPrice) ||
         parsedPrice <= 0 ||
         Number.isNaN(parsedQuantity) ||
-        parsedQuantity <= 0
+        parsedQuantity <= 0 ||
+        !Array.isArray(participantIds) ||
+        participantIds.length === 0
       ) {
         socket.emit("error", {
           message: "Invalid item data",
@@ -105,7 +110,6 @@ function registerSessionHandlers(socket, io) {
         return;
       }
 
-      // Check whether the session exists.
       const session = await Session.findOne({ roomCode });
 
       if (!session) {
@@ -115,22 +119,41 @@ function registerSessionHandlers(socket, io) {
         return;
       }
 
+      const existingParticipantIds =
+        session.participants.map((participant) =>
+          participant._id.toString()
+        );
+
+      const allParticipantsExist =
+        participantIds.every((id) =>
+          existingParticipantIds.includes(id)
+        );
+
+      if (!allParticipantsExist) {
+        socket.emit("error", {
+          message: "Invalid participant selection",
+        });
+        return;
+      }
+
       const newItem = {
         name: name.trim(),
         price: parsedPrice,
         quantity: parsedQuantity,
+        participantIds,
       };
 
-      // Add the item to the session.
       session.items.push(newItem);
 
-      // Save first so MongoDB becomes the source of truth.
       await session.save();
 
-      const addedItem = session.items[session.items.length - 1];
+      const addedItem =
+        session.items[session.items.length - 1];
 
-      // Notify everyone in the room after the item is successfully saved.
-      io.to(roomCode).emit("item-added", addedItem);
+      io.to(roomCode).emit(
+        "item-added",
+        addedItem
+      );
 
       console.log(
         `Item "${addedItem.name}" added to room ${roomCode}`
@@ -142,7 +165,8 @@ function registerSessionHandlers(socket, io) {
         message: "Something went wrong",
       });
     }
-  });
+  }
+);
 }
 
 module.exports = registerSessionHandlers;

@@ -35,6 +35,15 @@ const itemSchema = new mongoose.Schema({
     type: Number,
     default: 1,
   },
+
+  // Stores references to participant subdocument IDs.
+  // This avoids duplicating names and keeps assignments linked
+  // even if participant data changes later.
+  participantIds: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+    },
+  ],
 });
 
 const sessionSchema = new mongoose.Schema({

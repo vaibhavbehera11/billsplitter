@@ -1,4 +1,5 @@
 import ParticipantChip from "../components/ParticipantChip/ParticipantChip";
+import ItemCard from "../components/ItemCard/ItemCard";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import socket from "../services/socket";
@@ -321,25 +322,14 @@ useEffect(() => {
             </p>
           ) : (
             <div className="space-y-4">
-              {items.map((item, index) => (
-                <div
-                  key={item._id || index}
-                  className="rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm"
-                >
-                  <h4 className="text-lg font-semibold text-indigo-700">
-                    {item.name}
-                  </h4>
-
-                  <p className="mt-2 text-gray-700">
-                    <span className="font-medium">Price:</span> ₹{item.price}
-                  </p>
-
-                  <p className="text-gray-700">
-                    <span className="font-medium">Quantity:</span> {item.quantity}
-                  </p>
-                </div>
-              ))}
-            </div>
+  {items.map((item) => (
+    <ItemCard
+      key={item._id}
+      item={item}
+      participants={participants}
+    />
+  ))}
+</div>
           )}
         </div>
       </div>

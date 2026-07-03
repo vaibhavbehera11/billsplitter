@@ -84,44 +84,16 @@ function registerSessionHandlers(socket, io) {
   );
 
 
-  socket.on(
-    "add-item",
-    async ({
-      roomCode,
-      name,
-      price,
-      quantity,
-      paidBy,
-      participantIds,
-    }) => {
+    socket.on(
+    "toggle-item-assignment",
+    async ({ roomCode, itemId, participantId }) => {
       try {
-        const parsedPrice = Number(price);
-
-        const parsedQuantity =
-          quantity === undefined
-            ? 1
-            : Number(quantity);
-
-
-        // Validate item data before saving.
-        if (
-          !roomCode ||
-          !name ||
-          !name.trim() ||
-          Number.isNaN(parsedPrice) ||
-          parsedPrice <= 0 ||
-          Number.isNaN(parsedQuantity) ||
-          parsedQuantity <= 0 ||
-          !paidBy ||
-          !Array.isArray(participantIds) ||
-          participantIds.length === 0
-        ) {
+        if (!roomCode || !itemId || !participantId) {
           socket.emit("error", {
-            message: "Invalid item data",
+            message: "Invalid assignment data",
           });
           return;
         }
-
 
         const session = await Session.findOne({
           roomCode,
@@ -134,78 +106,60 @@ function registerSessionHandlers(socket, io) {
           return;
         }
 
+        const item = session.items.id(itemId);
 
-        const existingParticipantIds =
-          session.participants.map(
-            (participant) =>
-              participant._id.toString()
-          );
-
-
-        const allParticipantsExist =
-          participantIds.every((id) =>
-            existingParticipantIds.includes(id)
-          );
-
-
-        const payerExists =
-          existingParticipantIds.includes(paidBy);
-
-
-        if (
-          !allParticipantsExist ||
-          !payerExists
-        ) {
+        if (!item) {
           socket.emit("error", {
-            message:
-              "Invalid participant selection",
+            message: "Item not found",
           });
           return;
         }
 
+                const assignedParticipants =
+          item.participantIds.map((id) =>
+            id.toString()
+          );
 
-        const newItem = {
-          name: name.trim(),
-          price: parsedPrice,
-          quantity: parsedQuantity,
-          paidBy,
-          participantIds,
-        };
+        const alreadyAssigned =
+          assignedParticipants.includes(
+            participantId
+          );
 
+        if (alreadyAssigned) {
+          item.participantIds =
+            item.participantIds.filter(
+              (id) =>
+                id.toString() !== participantId
+            );
+        } else {
+          item.participantIds.push(
+            participantId
+          );
+        }
 
-        session.items.push(newItem);
+                await session.save();
 
-        await session.save();
-
-
-        const addedItem =
-          session.items[
-            session.items.length - 1
-          ];
-
-
-        const totals =
-        calculateTotals(session.items);
-
+        const totals = calculateTotals(
+          session.items
+        );
 
         const settlements =
-       calculateSettlements(session.items);
-       
-       
-
+          calculateSettlements(
+            session.items
+          );
 
         io.to(roomCode).emit(
-       "item-added",
-        {
-      item: addedItem,
-      totals,
-      settlements,
-        }
-      );
-
+          "assignment-updated",
+          {
+            items: session.items,
+            totals,
+            settlements,
+          }
+        );
 
         console.log(
-          `Item "${addedItem.name}" added to room ${roomCode}`
+          "Assignment updated for:",
+          item.name
         );
       } catch (error) {
         console.error(error);

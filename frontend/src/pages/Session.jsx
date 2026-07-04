@@ -1,6 +1,8 @@
 import ParticipantChip from "../components/ParticipantChip/ParticipantChip";
 import ItemCard from "../components/ItemCard/ItemCard";
 import RunningTotals from "../components/RunningTotals/RunningTotals";
+import SettlementList from "../components/SettlementList/SettlementList";
+import BillUpload from "../components/BillUpload/BillUpload";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import socket from "../services/socket";
@@ -25,6 +27,7 @@ function Session() {
   const [paidBy, setPaidBy] = useState("");
 
   const [totals, setTotals] = useState({});
+  const [settlements, setSettlements] = useState([]);
   const [error, setError] = useState("");
 
 
@@ -100,6 +103,16 @@ function Session() {
       participantId,
       participantName,
     }) => {
+      const handleAssignmentUpdated = ({
+      items,
+      totals,
+      settlements,
+    }) => {
+      setItems(items || []);
+      setTotals(totals || {});
+      setSettlements(settlements || []);
+    };
+
       localStorage.setItem(
         "participantId",
         participantId
@@ -137,6 +150,11 @@ function Session() {
       handleParticipantRegistered
     );
 
+    socket.on(
+      "assignment-updated",
+      handleAssignmentUpdated
+    );
+
 
     if (!socket.connected) {
       socket.connect();
@@ -165,6 +183,11 @@ function Session() {
       socket.off(
         "participant-registered",
         handleParticipantRegistered
+      );
+
+      socket.off(
+        "assignment-updated",
+        handleAssignmentUpdated
       );
     };
   }, [
@@ -200,6 +223,19 @@ function Session() {
       ];
     });
   };
+
+  const handleExtractedItems = (extractedItems) => {
+  extractedItems.forEach((item) => {
+    socket.emit("add-item", {
+      roomCode,
+      name: item.name,
+      price: Number(item.price),
+      quantity: Number(item.quantity),
+      paidBy,
+      participantIds: [],
+    });
+  });
+};
 
 
   const handleAddItem = () => {
@@ -335,6 +371,9 @@ function Session() {
 
         </div>
 
+        <BillUpload
+          onItemsExtracted={handleExtractedItems}
+        />
 
         {/* Add Item */}
         <div className="mt-10 border-t pt-6">
@@ -462,6 +501,9 @@ function Session() {
                   key={item._id}
                   item={item}
                   participants={participants}
+                  socket={socket}
+                  roomCode={roomCode}
+                  participantId={participantId}
                 />
               ))}
 
@@ -472,6 +514,10 @@ function Session() {
           <RunningTotals
             participants={participants}
             totals={totals}
+          />
+
+          <SettlementList
+            settlements={settlements}
           />
 
         </div>

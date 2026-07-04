@@ -1,11 +1,25 @@
 import ParticipantChip from "../ParticipantChip/ParticipantChip";
 
-function ItemCard({ item, participants }) {
+function ItemCard({
+  item,
+  participants,
+  participantId,
+  roomCode,
+  socket,
+}) {
   const participantIds = item.participantIds || [];
 
   const assignedParticipants = participants.filter((participant) =>
     participantIds.includes(participant._id)
   );
+
+  const handleToggleAssignment = () => {
+  socket.emit("toggle-item-assignment", {
+    roomCode,
+    itemId: item._id,
+    participantId,
+  });
+  };
 
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm">
@@ -37,6 +51,13 @@ function ItemCard({ item, participants }) {
           </div>
         </div>
       )}
+
+      <button
+  onClick={handleToggleAssignment}
+  className="mt-4 w-full rounded-lg bg-indigo-600 py-2 text-white hover:bg-indigo-700"
+>
+  I ate this
+</button>
     </div>
   );
 }

@@ -7,6 +7,8 @@ const { Server } = require("socket.io");
 
 const connectDB = require("./config/db");
 const sessionRoutes = require("./routes/sessions");
+const aiRoutes = require("./routes/aiRoutes");
+
 const initializeSocket = require("./socket");
 
 const app = express();
@@ -35,6 +37,7 @@ app.use(express.json());
 
 // Routes
 app.use("/sessions", sessionRoutes);
+app.use("/ai", aiRoutes);
 
 const PORT = process.env.PORT || 5000;
 

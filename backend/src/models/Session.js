@@ -32,9 +32,24 @@ const itemSchema = new mongoose.Schema({
   },
 
   quantity: {
-    type: Number,
-    default: 1,
-  },
+  type: Number,
+  default: 1,
+},
+
+// Stores which participant paid for this item.
+// Required later to calculate who owes whom.
+paidBy: {
+  type: mongoose.Schema.Types.ObjectId,
+},
+
+// Stores references to participant subdocument IDs.
+// This avoids duplicating names and keeps assignments linked
+// even if participant data changes later.
+participantIds: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+    },
+  ],
 });
 
 const sessionSchema = new mongoose.Schema({

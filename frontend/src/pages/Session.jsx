@@ -1,7 +1,7 @@
 import ParticipantChip from "../components/ParticipantChip/ParticipantChip";
 import ItemCard from "../components/ItemCard/ItemCard";
 import RunningTotals from "../components/RunningTotals/RunningTotals";
-
+import SettlementList from "../components/SettlementList/SettlementList";
 import BillUpload from "../components/BillUpload/BillUpload";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -27,9 +27,8 @@ function Session() {
   const [paidBy, setPaidBy] = useState("");
 
   const [totals, setTotals] = useState({});
-  
+  const [settlements, setSettlements] = useState([]);
   const [error, setError] = useState("");
-
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -80,16 +79,18 @@ function Session() {
 
 
     const handleItemAdded = ({
-      item,
-      totals,
-    }) => {
-      setItems((previousItems) => [
-        ...previousItems,
-        item,
-      ]);
+  item,
+  totals,
+  settlements,
+}) => {
+  setItems((previousItems) => [
+    ...previousItems,
+    item,
+  ]);
 
-      setTotals(totals);
-    };
+  setTotals(totals);
+  setSettlements(settlements);
+};
 
 
     const handleParticipantAdded = (
@@ -114,6 +115,16 @@ function Session() {
         "participantName",
         participantName
       );
+    };
+
+    const handleAssignmentUpdated = ({
+      items,
+      totals,
+      settlements,
+    }) => {
+      setItems(items || []);
+      setTotals(totals || {});
+      setSettlements(settlements || []);
     };
 
 
@@ -142,7 +153,10 @@ function Session() {
       handleParticipantRegistered
     );
 
-    
+    socket.on(
+  "assignment-updated",
+  handleAssignmentUpdated
+);
 
 
     if (!socket.connected) {
@@ -173,6 +187,11 @@ function Session() {
         "participant-registered",
         handleParticipantRegistered
       );
+
+      socket.off(
+  "assignment-updated",
+  handleAssignmentUpdated
+);
 
       
     };
@@ -275,18 +294,23 @@ function Session() {
     }
 
 
-    socket.emit(
-      "add-item",
-      {
-        roomCode,
-        name: itemName.trim(),
-        price: Number(price),
-        quantity: Number(quantity),
-        paidBy,
-        participantIds:
-          selectedParticipants,
-      }
-    );
+    console.log({
+  roomCode,
+  name: itemName.trim(),
+  price: Number(price),
+  quantity: Number(quantity),
+  paidBy,
+  participantIds: selectedParticipants,
+});
+
+socket.emit("add-item", {
+  roomCode,
+  name: itemName.trim(),
+  price: Number(price),
+  quantity: Number(quantity),
+  paidBy,
+  participantIds: selectedParticipants,
+});
 
 
     setItemName("");
@@ -500,6 +524,9 @@ function Session() {
             participants={participants}
             totals={totals}
           />
+          <SettlementList
+  settlements={settlements}
+/>
 
           
 

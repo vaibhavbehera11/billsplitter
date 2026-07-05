@@ -3,10 +3,10 @@ import ParticipantChip from "../ParticipantChip/ParticipantChip";
 function ItemCard({
   item,
   participants,
-  participantId,
-  roomCode,
   socket,
-}) {
+  roomCode,
+  participantId,
+})  {
   const participantIds = item.participantIds || [];
 
   const assignedParticipants = participants.filter((participant) =>
@@ -19,7 +19,8 @@ function ItemCard({
     itemId: item._id,
     participantId,
   });
-  };
+};
+
 
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm">

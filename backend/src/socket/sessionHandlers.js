@@ -83,6 +83,86 @@ function registerSessionHandlers(socket, io) {
     }
   );
 
+  socket.on(
+  "add-item",
+  async ({
+    roomCode,
+    name,
+    price,
+    quantity,
+    paidBy,
+    participantIds,
+  }) => {
+    try {
+      if (
+        !roomCode ||
+        !name ||
+        !price ||
+        !quantity ||
+        !paidBy ||
+        !participantIds ||
+        participantIds.length === 0
+      ) {
+        socket.emit("error", {
+          message: "Invalid item data",
+        });
+        return;
+      }
+
+      const session = await Session.findOne({
+        roomCode,
+      });
+
+      if (!session) {
+        socket.emit("error", {
+          message: "Session not found",
+        });
+        return;
+      }
+
+      session.items.push({
+        name: name.trim(),
+        price: Number(price),
+        quantity: Number(quantity),
+        paidBy,
+        participantIds,
+      });
+
+      await session.save();
+
+      const item =
+        session.items[
+          session.items.length - 1
+        ];
+
+      const totals =
+        calculateTotals(session.items);
+
+      const settlements =
+        calculateSettlements(session.items);
+
+      io.to(roomCode).emit(
+        "item-added",
+        {
+          item,
+          totals,
+          settlements,
+        }
+      );
+
+      console.log(
+        `Item "${item.name}" added to room ${roomCode}`
+      );
+    } catch (error) {
+      console.error(error);
+
+      socket.emit("error", {
+        message: "Something went wrong",
+      });
+    }
+  }
+);
+
 
     socket.on(
     "toggle-item-assignment",

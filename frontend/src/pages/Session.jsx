@@ -29,6 +29,10 @@ function Session() {
   const [totals, setTotals] = useState({});
   const [settlements, setSettlements] = useState([]);
   const [error, setError] = useState("");
+  const [scanSuccessMessage, setScanSuccessMessage] = useState("");
+const [addingScannedItem, setAddingScannedItem] = useState(null);
+  const [extractedItems, setExtractedItems] = useState([]);
+
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -229,18 +233,60 @@ function Session() {
     });
   };
 
-  const handleExtractedItems = (extractedItems) => {
-  extractedItems.forEach((item) => {
-    socket.emit("add-item", {
-      roomCode,
-      name: item.name,
-      price: Number(item.price),
-      quantity: Number(item.quantity),
-      paidBy,
-      participantIds: [],
-    });
-  });
+  const handleExtractedItems = (items) => {
+  setScanSuccessMessage("");
+  setError("");
+
+  if (!items || items.length === 0) {
+    setExtractedItems([]);
+    setError("No items were detected in the bill.");
+    return;
+  }
+
+  setExtractedItems(items);
 };
+
+  
+  const handleAddExtractedItem = (index) => {
+  const item = extractedItems[index];
+
+  if (!item) {
+    return;
+  }
+
+  if (!paidBy) {
+    setError("Select who paid before adding scanned items.");
+    return;
+  }
+
+  setError("");
+  setScanSuccessMessage("");
+  setAddingScannedItem(index);
+
+  socket.emit("add-item", {
+    roomCode,
+    name: item.name,
+    price: Number(item.price),
+    quantity: Number(item.quantity),
+    paidBy,
+    participantIds: [],
+  });
+
+  const remainingItems = extractedItems.filter(
+    (_, itemIndex) => itemIndex !== index
+  );
+
+  setExtractedItems(remainingItems);
+
+  if (remainingItems.length === 0) {
+    setScanSuccessMessage("All scanned items added.");
+  } else {
+    setScanSuccessMessage("Item added successfully.");
+  }
+
+  setAddingScannedItem(null);
+};
+
 
   const handleAddItem = () => {
     setError("");
@@ -381,8 +427,54 @@ socket.emit("add-item", {
         </div>
 
         <BillUpload
-  onItemsExtracted={handleExtractedItems}
-/>
+          onItemsExtracted={handleExtractedItems}
+        />
+
+        {extractedItems.length > 0 && (
+  <div className="mt-6 border rounded-xl p-4">
+    <h3 className="text-lg font-semibold mb-4">
+      Scanned Items
+    </h3>
+
+    <div className="space-y-3">
+      {extractedItems.map((item, index) => (
+        <div
+          key={index}
+          className="border rounded-lg p-3 flex items-center justify-between"
+        >
+          <div>
+            <p className="font-semibold">
+              {item.name}
+            </p>
+
+            <p className="text-sm text-gray-500">
+              ₹{item.price}
+            </p>
+
+            <p className="text-sm text-gray-500">
+              Qty: {item.quantity}
+            </p>
+          </div>
+
+          <button
+            onClick={() => handleAddExtractedItem(index)}
+            disabled={addingScannedItem === index}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+          {addingScannedItem === index ? "Adding..." : "Add"}
+          </button>
+        </div>
+      ))}
+    </div>
+    {scanSuccessMessage && (
+  <p className="mt-4 text-center text-green-600 font-medium">
+    {scanSuccessMessage}
+  </p>
+)}
+  </div>
+  
+)}
+
 
         {/* Add Item */}
         <div className="mt-10 border-t pt-6">
@@ -535,7 +627,7 @@ socket.emit("add-item", {
       </div>
     </div>
   );
+
+
 }
-
-
 export default Session;

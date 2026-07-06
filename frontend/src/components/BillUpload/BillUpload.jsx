@@ -5,14 +5,19 @@ function BillUpload({ onItemsExtracted }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
+  const [previewUrl, setPreviewUrl] = useState("");
 
   const handleFileChange = (event) => {
-    setError("");
+  setError("");
 
-    if (event.target.files && event.target.files.length > 0) {
-      setFile(event.target.files[0]);
-    }
-  };
+  if (event.target.files && event.target.files.length > 0) {
+    const selectedFile = event.target.files[0];
+
+    setFile(selectedFile);
+    setPreviewUrl(URL.createObjectURL(selectedFile));
+  }
+};
 
   const handleUpload = async () => {
     if (!file) {
@@ -21,6 +26,7 @@ function BillUpload({ onItemsExtracted }) {
     }
 
     try {
+      setError("");
       setLoading(true);
       setError("");
 
@@ -38,12 +44,21 @@ function BillUpload({ onItemsExtracted }) {
       );
 
       if (response.data.success) {
-        onItemsExtracted(response.data.items || []);
-        setFile(null);
-      }
+  onItemsExtracted(response.data.items || []);
+
+  setFile(null);
+  setPreviewUrl("");
+}
     } catch (error) {
       console.error(error);
-      setError("Failed to scan bill.");
+      if (error.response?.status === 400) {
+  setError("Unsupported or invalid bill image.");
+} else {
+  setError(
+    error.response?.data?.message ||
+    "Failed to scan bill. Please try again."
+  );
+}
     } finally {
       setLoading(false);
     }
@@ -56,16 +71,24 @@ function BillUpload({ onItemsExtracted }) {
       </h3>
 
       <input
-        type="file"
-        accept="image/*"
-        onChange={handleFileChange}
-      />
+  type="file"
+  accept="image/*"
+  onChange={handleFileChange}
+  disabled={loading}
+/>
+{previewUrl && (
+  <img
+    src={previewUrl}
+    alt="Bill Preview"
+    className="mt-4 w-full rounded-lg border object-cover max-h-72"
+  />
+)}
 
       <button
-        onClick={handleUpload}
-        disabled={loading}
-        className="mt-4 w-full rounded-lg bg-indigo-600 py-2 text-white"
-      >
+  onClick={handleUpload}
+  disabled={loading || !file}
+  className="mt-4 w-full rounded-lg bg-indigo-600 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+>
         {loading ? "Scanning..." : "Scan Bill"}
       </button>
 
